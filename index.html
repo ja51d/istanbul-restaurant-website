@@ -61,9 +61,11 @@
   .font-display{ font-family:'Cormorant Garamond',Georgia,serif; }
   .font-mono{ font-family:'Space Mono',monospace; }
 
-  /* Film grain overlay */
+  /* Film grain overlay — static tiled noise, NO mix-blend (blend over the animating canvas was the main perf killer) */
   .grain{
-    position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+    position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:140px 140px;
   }
 
   /* Scroll progress */
@@ -104,7 +106,7 @@
 
   /* Nav */
   #nav{ transition:background .5s ease,backdrop-filter .5s ease,padding .5s ease,border-color .5s; border-bottom:1px solid transparent; }
-  #nav.scrolled{ background:rgba(12,11,9,.72); backdrop-filter:blur(14px); border-color:rgba(201,162,75,.14); }
+  #nav.scrolled{ background:rgba(12,11,9,.9); backdrop-filter:blur(8px); border-color:rgba(201,162,75,.14); }
 
   .btn-gold{ background:var(--gold); color:#0c0b09; transition:transform .4s cubic-bezier(.16,1,.3,1),background .4s,box-shadow .4s; }
   .btn-gold:hover{ background:#e3c98a; box-shadow:0 10px 30px -8px rgba(201,162,75,.5); }
@@ -118,6 +120,7 @@
   .dish-viewport{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
   .dish-viewport::-webkit-scrollbar{ display:none; }
   @media (min-width:768px){ .dish-viewport{ overflow:hidden; } }
+  #dishTrack{ will-change:transform; }
 
   .veil-top{ background:linear-gradient(180deg,#0c0b09 0%,rgba(12,11,9,0) 30%,rgba(12,11,9,0) 70%,#0c0b09 100%); }
 
@@ -156,8 +159,8 @@
 <div id="cursor"></div>
 <div id="progress"></div>
 
-<!-- Grain -->
-<svg class="grain"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+<!-- Grain (cheap tiled noise, no per-frame blend) -->
+<div class="grain"></div>
 
 <!-- NAV -->
 <header id="nav" class="fixed top-0 left-0 w-full z-50 px-5 md:px-10 py-5">
@@ -641,10 +644,10 @@ $$('.lang').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)
 (function(){
   const canvas = $('#embers');
   if(!canvas || typeof THREE==='undefined' || prefersReduced) return;
-  let renderer, scene, camera, pts, raf, mouseX=0, mouseY=0;
+  let renderer, scene, camera, pts, raf, mouseX=0, mouseY=0, heroVisible=true;
   try{
-    renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:false, powerPreference:'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(60, canvas.clientWidth/canvas.clientHeight, 1, 1000);
@@ -660,7 +663,7 @@ $$('.lang').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)
     g.fillStyle=grad; g.fillRect(0,0,64,64);
     const tex = new THREE.Texture(c); tex.needsUpdate = true;
 
-    const N = 520, geo = new THREE.BufferGeometry();
+    const N = 420, geo = new THREE.BufferGeometry();
     const pos = new Float32Array(N*3), spd = new Float32Array(N);
     for(let i=0;i<N;i++){
       pos[i*3]   = (Math.random()-.5)*900;
@@ -688,8 +691,13 @@ $$('.lang').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)
     }
     window.addEventListener('resize', resize);
 
+    // pause all GPU work when the hero scrolls off-screen or the tab is hidden
+    const io = new IntersectionObserver(([e])=>{ heroVisible = e.isIntersecting; }, { threshold:0 });
+    io.observe(canvas);
+
     function animate(){
       raf = requestAnimationFrame(animate);
+      if(!heroVisible || document.hidden) return;
       const p = geo.attributes.position.array;
       for(let i=0;i<N;i++){
         p[i*3+1] += spd[i];                          // drift up
