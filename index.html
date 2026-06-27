@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>İstanbul Restaurant — Ocakbaşı & Meze · Bayrampaşa, İstanbul</title>
+<meta name="description" content="İstanbul Restaurant — Bayrampaşa'nın kalbinde ocakbaşı ızgara, taze mezeler ve şehrin en köklü lezzetleri. Her gün gece 02:00'a kadar açık." />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg:      '#0c0b09',
+          bg2:     '#14110d',
+          panel:   '#1a1611',
+          cream:   '#f3ece0',
+          muted:   '#a99f8d',
+          gold:    '#c9a24b',
+          goldsoft:'#e3c98a',
+          iznik:   '#2a8f86',
+        },
+        fontFamily: {
+          display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+          body:    ['Manrope', 'system-ui', 'sans-serif'],
+          mono:    ['"Space Mono"', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Manrope:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<!-- Animation libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0c0b09; --gold:#c9a24b; --cream:#f3ece0;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:#f3ece0; }
+  html{ overflow-x:hidden; }
+  body{ font-family:'Manrope',system-ui,sans-serif; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+
+  ::selection{ background:var(--gold); color:#0c0b09; }
+
+  /* Custom scrollbar (webkit) */
+  ::-webkit-scrollbar{ width:10px; }
+  ::-webkit-scrollbar-track{ background:#0c0b09; }
+  ::-webkit-scrollbar-thumb{ background:#3a3225; border-radius:0; }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--gold); }
+
+  .font-display{ font-family:'Cormorant Garamond',Georgia,serif; }
+  .font-mono{ font-family:'Space Mono',monospace; }
+
+  /* Film grain overlay */
+  .grain{
+    position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+  }
+
+  /* Scroll progress */
+  #progress{
+    position:fixed; top:0; left:0; height:2px; width:0%; z-index:80;
+    background:linear-gradient(90deg,#c9a24b,#e3c98a); box-shadow:0 0 12px rgba(201,162,75,.6);
+  }
+
+  /* Custom cursor */
+  #cursor{
+    position:fixed; top:0; left:0; width:9px; height:9px; border-radius:50%;
+    background:var(--gold); z-index:90; pointer-events:none; transform:translate(-50%,-50%);
+    transition:width .25s ease,height .25s ease,background .25s ease,opacity .3s ease; mix-blend-mode:difference;
+  }
+  #cursor.big{ width:54px; height:54px; background:transparent; border:1px solid var(--gold); }
+  @media (pointer:coarse){ #cursor{ display:none; } }
+
+  /* Loader */
+  #loader{
+    position:fixed; inset:0; z-index:120; background:#0c0b09;
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+  }
+  #loader .lo-word{ overflow:hidden; }
+  #loader .lo-line{ height:1px; background:#c9a24b; width:0; margin-top:18px; }
+
+  /* Reveal helpers (JS adds .in) */
+  .reveal-line{ display:block; overflow:hidden; }
+  .reveal-line > *{ display:block; }
+  .clip-img{ clip-path:inset(0 0 100% 0); }
+
+  /* Links underline animation */
+  .ul{ position:relative; }
+  .ul::after{
+    content:''; position:absolute; left:0; bottom:-3px; height:1px; width:100%;
+    background:currentColor; transform:scaleX(0); transform-origin:right; transition:transform .45s cubic-bezier(.16,1,.3,1);
+  }
+  .ul:hover::after{ transform:scaleX(1); transform-origin:left; }
+
+  /* Nav */
+  #nav{ transition:background .5s ease,backdrop-filter .5s ease,padding .5s ease,border-color .5s; border-bottom:1px solid transparent; }
+  #nav.scrolled{ background:rgba(12,11,9,.72); backdrop-filter:blur(14px); border-color:rgba(201,162,75,.14); }
+
+  .btn-gold{ background:var(--gold); color:#0c0b09; transition:transform .4s cubic-bezier(.16,1,.3,1),background .4s,box-shadow .4s; }
+  .btn-gold:hover{ background:#e3c98a; box-shadow:0 10px 30px -8px rgba(201,162,75,.5); }
+  .btn-line{ border:1px solid rgba(201,162,75,.45); color:#f3ece0; transition:border-color .4s,color .4s,background .4s; }
+  .btn-line:hover{ border-color:var(--gold); color:var(--gold); background:rgba(201,162,75,.06); }
+
+  /* Dish card + track. Mobile: swipeable, self-contained (no page overflow). Desktop: clipped for the GSAP pin. */
+  .dish{ flex:0 0 auto; }
+  .dish .tag{ background:linear-gradient(135deg,#1f1b15,#14110d); }
+  .dish-img-fallback{ background:radial-gradient(120% 120% at 30% 20%, #2a2017 0%, #14110d 60%, #0c0b09 100%); }
+  .dish-viewport{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .dish-viewport::-webkit-scrollbar{ display:none; }
+  @media (min-width:768px){ .dish-viewport{ overflow:hidden; } }
+
+  .veil-top{ background:linear-gradient(180deg,#0c0b09 0%,rgba(12,11,9,0) 30%,rgba(12,11,9,0) 70%,#0c0b09 100%); }
+
+  .hairline{ height:1px; background:linear-gradient(90deg,transparent,rgba(201,162,75,.35),transparent); }
+
+  /* marquee */
+  .marquee{ display:flex; white-space:nowrap; will-change:transform; }
+  @keyframes scrollx{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .marquee-anim{ animation:scrollx 28s linear infinite; }
+
+  /* form inputs editorial */
+  .field{ background:transparent; border:0; border-bottom:1px solid rgba(169,159,141,.3); color:#f3ece0; padding:12px 2px; width:100%; outline:none; transition:border-color .4s; }
+  .field:focus{ border-color:var(--gold); }
+  .field::placeholder{ color:#6f6757; }
+  label.fl{ font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#a99f8d; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+    .reveal-line > *{ transform:none !important; }
+    .clip-img{ clip-path:none !important; }
+  }
+</style>
+</head>
+
+<body class="bg-bg text-cream font-body">
+
+<!-- Loader -->
+<div id="loader">
+  <div class="lo-word">
+    <div class="font-display text-cream" style="font-size:clamp(2.4rem,8vw,5rem); line-height:1; letter-spacing:.02em;">İstanbul</div>
+  </div>
+  <div class="lo-line"></div>
+  <div class="font-mono text-muted mt-4" style="font-size:11px; letter-spacing:.3em;">BAYRAMPAŞA · İSTANBUL</div>
+</div>
+
+<div id="cursor"></div>
+<div id="progress"></div>
+
+<!-- Grain -->
+<svg class="grain"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+
+<!-- NAV -->
+<header id="nav" class="fixed top-0 left-0 w-full z-50 px-5 md:px-10 py-5">
+  <div class="max-w-[1400px] mx-auto flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-3 group" data-cursor>
+      <span class="font-display text-2xl md:text-[1.7rem] leading-none tracking-wide">İstanbul</span>
+      <span class="hidden sm:inline-block font-mono text-[10px] tracking-[.3em] text-gold/80 mt-1">RESTAURANT</span>
+    </a>
+
+    <nav class="hidden md:flex items-center gap-9 font-body text-[13px] tracking-wide text-cream/85">
+      <a href="#hikaye"  class="ul" data-cursor data-tr="Hikâye"   data-en="Story">Hikâye</a>
+      <a href="#lezzet"  class="ul" data-cursor data-tr="Lezzetler" data-en="Menu">Lezzetler</a>
+      <a href="#ambiyans" class="ul" data-cursor data-tr="Ambiyans" data-en="Ambience">Ambiyans</a>
+      <a href="#ziyaret" class="ul" data-cursor data-tr="Ziyaret"  data-en="Visit">Ziyaret</a>
+    </nav>
+
+    <div class="flex items-center gap-4">
+      <div class="hidden sm:flex items-center gap-1 font-mono text-[11px] text-muted">
+        <button data-lang="tr" class="lang px-2 py-1 text-gold">TR</button>
+        <span class="text-muted/40">/</span>
+        <button data-lang="en" class="lang px-2 py-1 text-muted">EN</button>
+      </div>
+      <a href="#rezervasyon" data-cursor class="btn-gold px-4 md:px-5 py-2.5 text-[12px] tracking-wide font-semibold uppercase" data-tr="Rezervasyon" data-en="Reserve">Rezervasyon</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section id="top" class="relative w-full min-h-[100svh] flex flex-col justify-end overflow-hidden">
+  <!-- three.js embers -->
+  <canvas id="embers" class="absolute inset-0 w-full h-full"></canvas>
+  <!-- skyline -->
+  <div id="skyline" class="absolute bottom-0 left-0 w-full pointer-events-none" style="height:34vh;"></div>
+  <div class="absolute inset-0 veil-top pointer-events-none"></div>
+
+  <div class="relative z-10 max-w-[1400px] mx-auto w-full px-5 md:px-10 pb-[10vh] md:pb-[12vh]">
+    <div class="flex items-center gap-4 mb-7 hero-fade" style="opacity:0;">
+      <span class="hairline w-10"></span>
+      <span class="font-mono text-[11px] tracking-[.32em] text-gold/90" data-tr="OCAKBAŞI · MEZE · IZGARA" data-en="GRILL · MEZE · OCAKBAŞI">OCAKBAŞI · MEZE · IZGARA</span>
+    </div>
+
+    <h1 class="font-display font-light text-cream" style="font-size:clamp(3rem,10.5vw,9.5rem); line-height:.92; letter-spacing:-.02em;">
+      <span class="reveal-line"><span data-tr="Ateşin ve" data-en="A table of">Ateşin ve</span></span>
+      <span class="reveal-line"><span class="italic text-goldsoft" data-tr="İstanbul'un" data-en="fire &amp;">İstanbul'un</span></span>
+      <span class="reveal-line"><span data-tr="sofrası" data-en="İstanbul">sofrası</span></span>
+    </h1>
+
+    <div class="mt-8 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+      <p class="max-w-[46ch] text-cream/75 text-[15px] md:text-base leading-relaxed hero-fade" style="opacity:0;"
+         data-tr="Bayrampaşa'nın kalbinde; ocakbaşı ızgaranın közü, günlük hazırlanan taze mezeler ve şehrin en köklü lezzetleri — gece 02:00'a kadar."
+         data-en="In the heart of Bayrampaşa — the embers of the ocakbaşı grill, fresh daily meze, and the city's most rooted flavours — open until 2 AM.">
+        Bayrampaşa'nın kalbinde; ocakbaşı ızgaranın közü, günlük hazırlanan taze mezeler ve şehrin en köklü lezzetleri — gece 02:00'a kadar.
+      </p>
+      <div class="flex items-center gap-4 hero-fade" style="opacity:0;">
+        <a href="#lezzet" data-cursor class="btn-gold px-7 py-3.5 text-[12px] tracking-wide font-semibold uppercase" data-tr="Menüyü Keşfet" data-en="Explore Menu">Menüyü Keşfet</a>
+        <a href="#rezervasyon" data-cursor class="btn-line px-7 py-3.5 text-[12px] tracking-wide font-semibold uppercase" data-tr="Masa Ayırt" data-en="Book a Table">Masa Ayırt</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- scroll cue -->
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 hero-fade" style="opacity:0;">
+    <span class="font-mono text-[10px] tracking-[.3em] text-muted" data-tr="KAYDIR" data-en="SCROLL">KAYDIR</span>
+    <span class="w-[1px] h-10 bg-gradient-to-b from-gold to-transparent"></span>
+  </div>
+</section>
+
+<!-- MARQUEE STRIP -->
+<section class="border-y border-gold/12 bg-bg2 py-5 overflow-hidden">
+  <div class="marquee marquee-anim font-display italic text-cream/30" style="font-size:clamp(1.5rem,4vw,2.6rem);">
+    <span class="flex shrink-0">
+      <span class="px-8">Adana</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Künefe</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Mezeler</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">İskender</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Ocakbaşı</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Testi Kebabı</span><span class="px-8 text-gold/40">✦</span>
+    </span>
+    <span class="flex shrink-0" aria-hidden="true">
+      <span class="px-8">Adana</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Künefe</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Mezeler</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">İskender</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Ocakbaşı</span><span class="px-8 text-gold/40">✦</span>
+      <span class="px-8">Testi Kebabı</span><span class="px-8 text-gold/40">✦</span>
+    </span>
+  </div>
+</section>
+
+<!-- 01 — HİKÂYE -->
+<section id="hikaye" class="relative py-[14vh] md:py-[18vh] px-5 md:px-10">
+  <div class="max-w-[1400px] mx-auto grid md:grid-cols-12 gap-10 md:gap-16 items-center">
+    <div class="md:col-span-6 order-2 md:order-1">
+      <div class="flex items-center gap-3 mb-7">
+        <span class="font-mono text-gold text-[12px] tracking-[.2em]">01</span>
+        <span class="hairline w-12"></span>
+        <span class="font-mono text-[11px] tracking-[.28em] text-muted" data-tr="HİKÂYE" data-en="OUR STORY">HİKÂYE</span>
+      </div>
+      <h2 class="font-display font-light leading-[1.04] mb-8" style="font-size:clamp(2.2rem,5vw,4rem);">
+        <span class="reveal-line"><span data-tr="Köz, bakır ve" data-en="Embers, copper &amp;">Köz, bakır ve</span></span>
+        <span class="reveal-line"><span class="italic text-goldsoft" data-tr="bir şehrin hafızası" data-en="a city's memory">bir şehrin hafızası</span></span>
+      </h2>
+      <div class="space-y-5 text-cream/70 leading-relaxed max-w-[52ch] text-[15px]">
+        <p data-tr="İstanbul Restaurant, Bayrampaşa Abdi İpekçi Caddesi'nde; ocakbaşının közünü, Anadolu'nun baharatını ve İstanbul misafirperverliğini aynı sofrada buluşturur."
+           data-en="On Abdi İpekçi Avenue in Bayrampaşa, İstanbul Restaurant brings the embers of the ocakbaşı, the spices of Anatolia and the hospitality of İstanbul to a single table.">
+          İstanbul Restaurant, Bayrampaşa Abdi İpekçi Caddesi'nde; ocakbaşının közünü, Anadolu'nun baharatını ve İstanbul misafirperverliğini aynı sofrada buluşturur.
+        </p>
+        <p data-tr="Her gün taze hazırlanan mezeler, ustaların elinde şekillenen kebaplar ve sahanda gelen sıcak başlangıçlar — geç saatlere kadar süren keyifli bir sofranın davetidir."
+           data-en="Meze prepared fresh each day, kebabs shaped by the hands of masters and hot starters straight from the pan — an invitation to a table that lingers late into the night.">
+          Her gün taze hazırlanan mezeler, ustaların elinde şekillenen kebaplar ve sahanda gelen sıcak başlangıçlar — geç saatlere kadar süren keyifli bir sofranın davetidir.
+        </p>
+      </div>
+
+      <div class="mt-10 flex flex-wrap gap-x-12 gap-y-6">
+        <div>
+          <div class="font-display text-gold text-4xl leading-none">4.5<span class="text-xl text-muted">/5</span></div>
+          <div class="font-mono text-[10px] tracking-[.2em] text-muted mt-2" data-tr="80 DEĞERLENDİRME" data-en="80 REVIEWS">80 DEĞERLENDİRME</div>
+        </div>
+        <div>
+          <div class="font-display text-gold text-4xl leading-none">02:00</div>
+          <div class="font-mono text-[10px] tracking-[.2em] text-muted mt-2" data-tr="GECE AÇIK" data-en="OPEN LATE">GECE AÇIK</div>
+        </div>
+        <div>
+          <div class="font-display text-gold text-4xl leading-none">₺800<span class="text-xl text-muted">+</span></div>
+          <div class="font-mono text-[10px] tracking-[.2em] text-muted mt-2" data-tr="KİŞİ BAŞI" data-en="PER PERSON">KİŞİ BAŞI</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="md:col-span-6 order-1 md:order-2">
+      <div class="relative">
+        <div class="story-img clip-img overflow-hidden" style="aspect-ratio:4/5;">
+          <img alt="Ocakbaşı ızgara" class="w-full h-full object-cover"
+               src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1100&q=80"
+               onerror="this.style.display='none';this.parentElement.classList.add('dish-img-fallback');" />
+        </div>
+        <div class="absolute -bottom-6 -left-6 bg-bg2 border border-gold/20 px-6 py-5 hidden md:block">
+          <div class="font-display italic text-goldsoft text-xl" data-tr="Ocakbaşı geleneği" data-en="The ocakbaşı tradition">Ocakbaşı geleneği</div>
+          <div class="font-mono text-[10px] tracking-[.2em] text-muted mt-1">EST. BAYRAMPAŞA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 — İMZA LEZZETLER (horizontal cinematic) -->
+<section id="lezzet" class="relative py-[8vh]">
+  <div class="max-w-[1400px] mx-auto px-5 md:px-10 mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+    <div>
+      <div class="flex items-center gap-3 mb-6">
+        <span class="font-mono text-gold text-[12px] tracking-[.2em]">02</span>
+        <span class="hairline w-12"></span>
+        <span class="font-mono text-[11px] tracking-[.28em] text-muted" data-tr="İMZA LEZZETLER" data-en="SIGNATURES">İMZA LEZZETLER</span>
+      </div>
+      <h2 class="font-display font-light leading-[1.02]" style="font-size:clamp(2.4rem,6vw,4.6rem);">
+        <span data-tr="Ateşten gelen" data-en="Straight from">Ateşten gelen</span><br>
+        <span class="italic text-goldsoft" data-tr="imzalar" data-en="the fire">imzalar</span>
+      </h2>
+    </div>
+    <p class="max-w-[34ch] text-cream/60 text-[14px] leading-relaxed" data-tr="Sürükleyerek keşfedin. Mevsime ve güne göre değişen, ustaların seçtiği lezzetler." data-en="Drag to explore. A master's selection that shifts with the season and the day.">
+      Sürükleyerek keşfedin. Mevsime ve güne göre değişen, ustaların seçtiği lezzetler.
+    </p>
+  </div>
+
+  <div class="dish-viewport w-full">
+    <div id="dishTrack" class="flex gap-5 md:gap-7 px-5 md:px-10 pb-4" style="scroll-snap-type:x mandatory;">
+
+      <!-- card -->
+      <article class="dish w-[78vw] sm:w-[360px] md:w-[400px]" style="scroll-snap-align:start;" data-cursor>
+        <div class="relative overflow-hidden mb-5 dish-img-fallback" style="aspect-ratio:4/5;">
+          <img alt="Adana Kebap" class="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+               src="https://images.unsplash.com/photo-1633237308525-cd587cf71926?auto=format&fit=crop&w=900&q=80"
+               onerror="this.style.display='none';" />
+          <span class="absolute top-4 left-4 tag font-mono text-[10px] tracking-[.2em] text-gold px-3 py-1.5 border border-gold/20">IZGARA</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 class="font-display text-2xl" data-tr="Adana Kebap" data-en="Adana Kebab">Adana Kebap</h3>
+          <span class="font-mono text-gold text-sm">₺320</span>
+        </div>
+        <p class="text-cream/55 text-[13px] mt-2 leading-relaxed" data-tr="Zırhla çekilmiş kuzu, közde; acılı ve dumanlı." data-en="Hand-minced lamb over coals; smoky and spiced.">Zırhla çekilmiş kuzu, közde; acılı ve dumanlı.</p>
+      </article>
+
+      <article class="dish w-[78vw] sm:w-[360px] md:w-[400px]" style="scroll-snap-align:start;" data-cursor>
+        <div class="relative overflow-hidden mb-5 dish-img-fallback" style="aspect-ratio:4/5;">
+          <img alt="İskender" class="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+               src="https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=900&q=80"
+               onerror="this.style.display='none';" />
+          <span class="absolute top-4 left-4 tag font-mono text-[10px] tracking-[.2em] text-gold px-3 py-1.5 border border-gold/20">KLASİK</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 class="font-display text-2xl">İskender</h3>
+          <span class="font-mono text-gold text-sm">₺350</span>
+        </div>
+        <p class="text-cream/55 text-[13px] mt-2 leading-relaxed" data-tr="Tereyağı, domates sosu ve yoğurt ile döner." data-en="Döner with browned butter, tomato and yoghurt.">Tereyağı, domates sosu ve yoğurt ile döner.</p>
+      </article>
+
+      <article class="dish w-[78vw] sm:w-[360px] md:w-[400px]" style="scroll-snap-align:start;" data-cursor>
+        <div class="relative overflow-hidden mb-5 dish-img-fallback" style="aspect-ratio:4/5;">
+          <img alt="Karışık Izgara" class="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+               src="https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?auto=format&fit=crop&w=900&q=80"
+               onerror="this.style.display='none';" />
+          <span class="absolute top-4 left-4 tag font-mono text-[10px] tracking-[.2em] text-gold px-3 py-1.5 border border-gold/20" data-tr="ŞEF" data-en="CHEF">ŞEF</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 class="font-display text-2xl" data-tr="Karışık Izgara" data-en="Mixed Grill">Karışık Izgara</h3>
+          <span class="font-mono text-gold text-sm">₺520</span>
+        </div>
+        <p class="text-cream/55 text-[13px] mt-2 leading-relaxed" data-tr="Kuzu şiş, tavuk, köfte ve pirzola bir tabakta." data-en="Lamb şiş, chicken, köfte and chops on one plate.">Kuzu şiş, tavuk, köfte ve pirzola bir tabakta.</p>
+      </article>
+
+      <article class="dish w-[78vw] sm:w-[360px] md:w-[400px]" style="scroll-snap-align:start;" data-cursor>
+        <div class="relative overflow-hidden mb-5 dish-img-fallback" style="aspect-ratio:4/5;">
+          <img alt="Meze Tabağı" class="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+               src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=900&q=80"
+               onerror="this.style.display='none';" />
+          <span class="absolute top-4 left-4 tag font-mono text-[10px] tracking-[.2em] text-gold px-3 py-1.5 border border-gold/20">MEZE</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 class="font-display text-2xl" data-tr="Meze Seçkisi" data-en="Meze Selection">Meze Seçkisi</h3>
+          <span class="font-mono text-gold text-sm">₺240</span>
+        </div>
+        <p class="text-cream/55 text-[13px] mt-2 leading-relaxed" data-tr="Haydari, acılı ezme, humus ve günün mezeleri." data-en="Haydari, acılı ezme, hummus and the day's meze.">Haydari, acılı ezme, humus ve günün mezeleri.</p>
+      </article>
+
+      <article class="dish w-[78vw] sm:w-[360px] md:w-[400px]" style="scroll-snap-align:start;" data-cursor>
+        <div class="relative overflow-hidden mb-5 dish-img-fallback" style="aspect-ratio:4/5;">
+          <img alt="Künefe" class="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+               src="https://images.unsplash.com/photo-1519676867240-f03562e64548?auto=format&fit=crop&w=900&q=80"
+               onerror="this.style.display='none';" />
+          <span class="absolute top-4 left-4 tag font-mono text-[10px] tracking-[.2em] text-gold px-3 py-1.5 border border-gold/20" data-tr="TATLI" data-en="DESSERT">TATLI</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 class="font-display text-2xl">Künefe</h3>
+          <span class="font-mono text-gold text-sm">₺180</span>
+        </div>
+        <p class="text-cream/55 text-[13px] mt-2 leading-relaxed" data-tr="Tel kadayıf, eritilmiş peynir ve sıcak şerbet." data-en="Shredded kadayıf, melted cheese, warm syrup.">Tel kadayıf, eritilmiş peynir ve sıcak şerbet.</p>
+      </article>
+
+      <article class="dish w-[78vw] sm:w-[360px] md:w-[400px] flex items-center" style="scroll-snap-align:start;">
+        <a href="#rezervasyon" data-cursor class="block w-full border border-gold/25 px-8 py-12 text-center hover:bg-gold/[.04] transition-colors">
+          <div class="font-display italic text-goldsoft text-3xl mb-3" data-tr="Tam menü masada" data-en="Full menu at the table">Tam menü masada</div>
+          <div class="font-mono text-[11px] tracking-[.2em] text-muted" data-tr="REZERVASYON İÇİN DOKUN →" data-en="TAP TO RESERVE →">REZERVASYON İÇİN DOKUN →</div>
+        </a>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- PULL QUOTE -->
+<section class="relative py-[16vh] px-5 md:px-10 overflow-hidden">
+  <div class="max-w-[1100px] mx-auto text-center">
+    <span class="font-display text-gold/30 leading-none block" style="font-size:clamp(4rem,12vw,9rem);">“</span>
+    <blockquote class="font-display font-light leading-[1.12] -mt-8" style="font-size:clamp(1.8rem,4.6vw,3.6rem);">
+      <span class="quote-rev" data-tr="Sofranın bereketi, ateşin sabrı ve" data-en="The abundance of the table, the patience of the fire,">Sofranın bereketi, ateşin sabrı ve</span>
+      <span class="quote-rev italic text-goldsoft" data-tr="İstanbul'un misafirperverliği." data-en="and the hospitality of İstanbul.">İstanbul'un misafirperverliği.</span>
+    </blockquote>
+    <div class="mt-10 font-mono text-[11px] tracking-[.28em] text-muted">İSTANBUL RESTAURANT · BAYRAMPAŞA</div>
+  </div>
+</section>
+
+<!-- 03 — AMBİYANS (parallax gallery) -->
+<section id="ambiyans" class="relative py-[8vh] px-5 md:px-10">
+  <div class="max-w-[1400px] mx-auto">
+    <div class="flex items-center gap-3 mb-12">
+      <span class="font-mono text-gold text-[12px] tracking-[.2em]">03</span>
+      <span class="hairline w-12"></span>
+      <span class="font-mono text-[11px] tracking-[.28em] text-muted" data-tr="AMBİYANS" data-en="AMBIENCE">AMBİYANS</span>
+    </div>
+
+    <div class="grid md:grid-cols-12 gap-5 md:gap-7">
+      <div class="md:col-span-7">
+        <div class="parax overflow-hidden h-[52vh] md:h-[70vh] dish-img-fallback">
+          <img alt="İç mekan" class="w-full h-[120%] object-cover" data-speed="-40"
+               src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80"
+               onerror="this.style.display='none';" />
+        </div>
+      </div>
+      <div class="md:col-span-5 flex flex-col gap-5 md:gap-7">
+        <div class="parax overflow-hidden h-[30vh] md:h-[33vh] dish-img-fallback">
+          <img alt="Sofra" class="w-full h-[120%] object-cover" data-speed="40"
+               src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80"
+               onerror="this.style.display='none';" />
+        </div>
+        <div class="bg-bg2 border border-gold/15 p-7 md:p-9 flex-1 flex flex-col justify-center">
+          <p class="font-display italic text-cream/80 leading-snug" style="font-size:clamp(1.3rem,2.4vw,1.9rem);"
+             data-tr="Tuğla duvarlar, İstanbul manzarası ve sıcak bir ışık — sofranın etrafında geçen uzun akşamlar için."
+             data-en="Brick walls, an İstanbul panorama and warm light — made for long evenings around the table.">
+            Tuğla duvarlar, İstanbul manzarası ve sıcak bir ışık — sofranın etrafında geçen uzun akşamlar için.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 — ZİYARET -->
+<section id="ziyaret" class="relative py-[14vh] md:py-[18vh] px-5 md:px-10 bg-bg2 border-t border-gold/10">
+  <div class="max-w-[1400px] mx-auto grid md:grid-cols-12 gap-12 md:gap-16">
+    <div class="md:col-span-5">
+      <div class="flex items-center gap-3 mb-7">
+        <span class="font-mono text-gold text-[12px] tracking-[.2em]">04</span>
+        <span class="hairline w-12"></span>
+        <span class="font-mono text-[11px] tracking-[.28em] text-muted" data-tr="ZİYARET" data-en="VISIT">ZİYARET</span>
+      </div>
+      <h2 class="font-display font-light leading-[1.04] mb-10" style="font-size:clamp(2.2rem,5vw,3.8rem);">
+        <span data-tr="Sizi soframızda" data-en="We'd love to host">Sizi soframızda</span><br>
+        <span class="italic text-goldsoft" data-tr="ağırlamak isteriz" data-en="you at our table">ağırlamak isteriz</span>
+      </h2>
+
+      <div class="space-y-7">
+        <div>
+          <div class="font-mono text-[10px] tracking-[.22em] text-gold mb-2" data-tr="ADRES" data-en="ADDRESS">ADRES</div>
+          <p class="text-cream/80 leading-relaxed">Yenidoğan, Abdi İpekçi Cd. No:49,<br>34040 Bayrampaşa / İstanbul</p>
+          <a href="https://maps.app.goo.gl/HgUhaBDF2kRAC3ZG7" target="_blank" rel="noopener" data-cursor class="ul inline-block mt-2 text-gold text-[13px] font-mono tracking-wide" data-tr="YOL TARİFİ AL →" data-en="GET DIRECTIONS →">YOL TARİFİ AL →</a>
+        </div>
+        <div class="hairline"></div>
+        <div class="grid grid-cols-2 gap-7">
+          <div>
+            <div class="font-mono text-[10px] tracking-[.22em] text-gold mb-2" data-tr="ÇALIŞMA SAATLERİ" data-en="HOURS">ÇALIŞMA SAATLERİ</div>
+            <p class="text-cream/80 leading-relaxed text-[15px]" data-tr="Her gün<br>11:00 – 02:00" data-en="Daily<br>11:00 – 02:00">Her gün<br>11:00 – 02:00</p>
+          </div>
+          <div>
+            <div class="font-mono text-[10px] tracking-[.22em] text-gold mb-2" data-tr="TELEFON" data-en="PHONE">TELEFON</div>
+            <a href="tel:+902125677303" data-cursor class="ul text-cream/80 text-[15px]">(0212) 567 73 03</a>
+          </div>
+          <div>
+            <div class="font-mono text-[10px] tracking-[.22em] text-gold mb-2" data-tr="KİŞİ BAŞI" data-en="PER PERSON">KİŞİ BAŞI</div>
+            <p class="text-cream/80 text-[15px]">₺800 – 1.000</p>
+          </div>
+          <div>
+            <div class="font-mono text-[10px] tracking-[.22em] text-gold mb-2">PLUS CODE</div>
+            <p class="text-cream/80 text-[15px]">2WP6+QR Bayrampaşa</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="md:col-span-7">
+      <div class="relative w-full h-full min-h-[360px] overflow-hidden border border-gold/15 bg-panel">
+        <!-- fallback (shows if the live embed is blocked); the map loads on top of it -->
+        <a href="https://maps.app.goo.gl/HgUhaBDF2kRAC3ZG7" target="_blank" rel="noopener" data-cursor
+           class="absolute inset-0 z-0 flex flex-col items-center justify-center text-center gap-3 px-6"
+           style="background-image:radial-gradient(circle at 30% 25%, rgba(201,162,75,.10), transparent 60%);">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#c9a24b" stroke-width="1.3"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+          <div class="font-display text-2xl text-cream">Bayrampaşa, İstanbul</div>
+          <div class="font-mono text-[11px] tracking-[.2em] text-muted">2WP6+QR · ABDİ İPEKÇİ CD. No:49</div>
+          <span class="btn-line px-5 py-2.5 text-[11px] tracking-wide font-semibold uppercase mt-1" data-tr="Google Haritalar'da Aç" data-en="Open in Google Maps">Google Haritalar'da Aç</span>
+        </a>
+        <iframe
+          title="İstanbul Restaurant — harita"
+          src="https://www.google.com/maps?q=Abdi%20%C4%B0pek%C3%A7i%20Cd.%20No%3A49%20Bayrampa%C5%9Fa%20%C4%B0stanbul&z=16&output=embed"
+          class="absolute inset-0 w-full h-full z-10" style="border:0; filter:grayscale(.25) contrast(1.05);"
+          loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 — REZERVASYON -->
+<section id="rezervasyon" class="relative py-[14vh] md:py-[18vh] px-5 md:px-10">
+  <div class="max-w-[1100px] mx-auto">
+    <div class="text-center mb-14">
+      <div class="flex items-center justify-center gap-3 mb-6">
+        <span class="font-mono text-gold text-[12px] tracking-[.2em]">05</span>
+        <span class="hairline w-12"></span>
+        <span class="font-mono text-[11px] tracking-[.28em] text-muted" data-tr="REZERVASYON" data-en="RESERVATION">REZERVASYON</span>
+      </div>
+      <h2 class="font-display font-light leading-[1.02]" style="font-size:clamp(2.4rem,6vw,4.8rem);">
+        <span data-tr="Masanızı" data-en="Reserve">Masanızı</span> <span class="italic text-goldsoft" data-tr="ayırtın" data-en="your table">ayırtın</span>
+      </h2>
+    </div>
+
+    <form id="resForm" class="grid md:grid-cols-2 gap-x-10 gap-y-9">
+      <div>
+        <label class="fl" data-tr="AD SOYAD" data-en="FULL NAME">AD SOYAD</label>
+        <input required class="field" type="text" placeholder="Adınız Soyadınız" />
+      </div>
+      <div>
+        <label class="fl" data-tr="TELEFON" data-en="PHONE">TELEFON</label>
+        <input required class="field" type="tel" placeholder="05XX XXX XX XX" />
+      </div>
+      <div>
+        <label class="fl" data-tr="TARİH" data-en="DATE">TARİH</label>
+        <input required class="field" type="date" />
+      </div>
+      <div>
+        <label class="fl" data-tr="SAAT" data-en="TIME">SAAT</label>
+        <input required class="field" type="time" />
+      </div>
+      <div>
+        <label class="fl" data-tr="KİŞİ SAYISI" data-en="GUESTS">KİŞİ SAYISI</label>
+        <input required class="field" type="number" min="1" max="40" placeholder="2" />
+      </div>
+      <div>
+        <label class="fl" data-tr="NOT (İSTEĞE BAĞLI)" data-en="NOTE (OPTIONAL)">NOT (İSTEĞE BAĞLI)</label>
+        <input class="field" type="text" placeholder="Doğum günü, pencere kenarı…" />
+      </div>
+      <div class="md:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-6 mt-4">
+        <p class="text-muted text-[13px] max-w-[40ch]" data-tr="Talebinizi aldıktan sonra sizi telefonla arayarak teyit ediyoruz." data-en="After we receive your request, we'll call you to confirm.">Talebinizi aldıktan sonra sizi telefonla arayarak teyit ediyoruz.</p>
+        <button type="submit" data-cursor class="btn-gold px-10 py-4 text-[12px] tracking-wide font-semibold uppercase whitespace-nowrap" data-tr="Rezervasyon Gönder" data-en="Send Request">Rezervasyon Gönder</button>
+      </div>
+    </form>
+
+    <div class="text-center mt-12 font-mono text-[12px] tracking-wide text-muted">
+      <span data-tr="veya doğrudan arayın" data-en="or call us directly">veya doğrudan arayın</span> ·
+      <a href="tel:+902125677303" data-cursor class="ul text-gold">(0212) 567 73 03</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative border-t border-gold/12 bg-bg2 pt-[10vh] pb-10 px-5 md:px-10 overflow-hidden">
+  <div class="max-w-[1400px] mx-auto">
+    <div class="font-display leading-none text-cream/[.06] select-none pointer-events-none" style="font-size:clamp(4rem,20vw,18rem);">İstanbul</div>
+    <div class="grid md:grid-cols-4 gap-10 -mt-6 md:-mt-16 relative">
+      <div class="md:col-span-2">
+        <div class="font-display text-3xl mb-3">İstanbul <span class="text-gold">Restaurant</span></div>
+        <p class="text-cream/55 max-w-[40ch] text-[14px] leading-relaxed" data-tr="Ocakbaşı ızgara, taze mezeler ve İstanbul misafirperverliği — Bayrampaşa'nın kalbinde." data-en="Ocakbaşı grill, fresh meze and İstanbul hospitality — in the heart of Bayrampaşa.">Ocakbaşı ızgara, taze mezeler ve İstanbul misafirperverliği — Bayrampaşa'nın kalbinde.</p>
+      </div>
+      <div>
+        <div class="font-mono text-[10px] tracking-[.22em] text-gold mb-4">İLETİŞİM</div>
+        <p class="text-cream/70 text-[14px] leading-relaxed">Abdi İpekçi Cd. No:49<br>Bayrampaşa / İstanbul</p>
+        <a href="tel:+902125677303" class="ul text-cream/70 text-[14px] block mt-3">(0212) 567 73 03</a>
+      </div>
+      <div>
+        <div class="font-mono text-[10px] tracking-[.22em] text-gold mb-4" data-tr="SAATLER" data-en="HOURS">SAATLER</div>
+        <p class="text-cream/70 text-[14px] leading-relaxed" data-tr="Her gün<br>11:00 – 02:00" data-en="Daily<br>11:00 – 02:00">Her gün<br>11:00 – 02:00</p>
+        <a href="https://maps.app.goo.gl/HgUhaBDF2kRAC3ZG7" target="_blank" rel="noopener" class="ul text-gold text-[13px] font-mono block mt-3" data-tr="HARİTADA AÇ →" data-en="OPEN IN MAPS →">HARİTADA AÇ →</a>
+      </div>
+    </div>
+    <div class="hairline my-8"></div>
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] tracking-wide text-muted">
+      <span>© <span id="year"></span> İstanbul Restaurant</span>
+      <span class="text-muted/60">Bayrampaşa · İstanbul · 2WP6+QR</span>
+    </div>
+  </div>
+</footer>
+
+<!-- toast -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gold text-bg px-7 py-4 font-semibold text-sm tracking-wide opacity-0 translate-y-4 transition-all duration-500 pointer-events-none"></div>
+
+<script>
+/* ============ helpers ============ */
+const $  = (s,c=document)=>c.querySelector(s);
+const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+document.getElementById('year').textContent = new Date().getFullYear();
+
+/* ============ language toggle ============ */
+let lang = 'tr';
+function setLang(l){
+  lang = l;
+  document.documentElement.lang = l;
+  $$('[data-tr]').forEach(el=>{
+    const v = l==='tr' ? el.dataset.tr : (el.dataset.en || el.dataset.tr);
+    if(v!=null){ if(/<br>/.test(v)){ el.innerHTML = v; } else { el.textContent = v; } }
+  });
+  $$('.lang').forEach(b=>{
+    const on = b.dataset.lang===l;
+    b.classList.toggle('text-gold', on);
+    b.classList.toggle('text-muted', !on);
+  });
+}
+$$('.lang').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.lang)));
+
+/* ============ custom cursor ============ */
+(function(){
+  if(window.matchMedia('(pointer:coarse)').matches) return;
+  const cur = $('#cursor');
+  let x=innerWidth/2, y=innerHeight/2, cx=x, cy=y;
+  window.addEventListener('mousemove', e=>{ x=e.clientX; y=e.clientY; });
+  function loop(){ cx+=(x-cx)*.18; cy+=(y-cy)*.18; cur.style.left=cx+'px'; cur.style.top=cy+'px'; requestAnimationFrame(loop); }
+  loop();
+  document.addEventListener('mouseover', e=>{ if(e.target.closest('[data-cursor]')) cur.classList.add('big'); });
+  document.addEventListener('mouseout',  e=>{ if(e.target.closest('[data-cursor]')) cur.classList.remove('big'); });
+})();
+
+/* ============ three.js embers ============ */
+(function(){
+  const canvas = $('#embers');
+  if(!canvas || typeof THREE==='undefined' || prefersReduced) return;
+  let renderer, scene, camera, pts, raf, mouseX=0, mouseY=0;
+  try{
+    renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(60, canvas.clientWidth/canvas.clientHeight, 1, 1000);
+    camera.position.z = 360;
+
+    // soft round sprite
+    const c = document.createElement('canvas'); c.width=c.height=64;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(32,32,0,32,32,32);
+    grad.addColorStop(0,'rgba(255,225,160,1)');
+    grad.addColorStop(.3,'rgba(227,201,138,.7)');
+    grad.addColorStop(1,'rgba(201,162,75,0)');
+    g.fillStyle=grad; g.fillRect(0,0,64,64);
+    const tex = new THREE.Texture(c); tex.needsUpdate = true;
+
+    const N = 520, geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(N*3), spd = new Float32Array(N);
+    for(let i=0;i<N;i++){
+      pos[i*3]   = (Math.random()-.5)*900;
+      pos[i*3+1] = (Math.random()-.5)*700;
+      pos[i*3+2] = (Math.random()-.5)*500;
+      spd[i] = .15 + Math.random()*.7;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    const mat = new THREE.PointsMaterial({
+      size:7, map:tex, transparent:true, depthWrite:false,
+      blending:THREE.AdditiveBlending, color:0xc9a24b, opacity:.9
+    });
+    pts = new THREE.Points(geo, mat);
+    scene.add(pts);
+
+    window.addEventListener('mousemove', e=>{
+      mouseX = (e.clientX/innerWidth - .5);
+      mouseY = (e.clientY/innerHeight - .5);
+    });
+
+    function resize(){
+      const w=canvas.clientWidth, h=canvas.clientHeight;
+      renderer.setSize(w,h,false);
+      camera.aspect=w/h; camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+
+    function animate(){
+      raf = requestAnimationFrame(animate);
+      const p = geo.attributes.position.array;
+      for(let i=0;i<N;i++){
+        p[i*3+1] += spd[i];                          // drift up
+        p[i*3]   += Math.sin((p[i*3+1]+i)*.004)*.25; // sway
+        if(p[i*3+1] > 360){ p[i*3+1] = -360; }
+      }
+      geo.attributes.position.needsUpdate = true;
+      camera.position.x += (mouseX*60 - camera.position.x)*.04;
+      camera.position.y += (-mouseY*40 - camera.position.y)*.04;
+      camera.lookAt(scene.position);
+      pts.rotation.y += .0004;
+      renderer.render(scene, camera);
+    }
+    animate();
+  }catch(err){ console.warn('embers disabled', err); }
+})();
+
+/* ============ skyline (deterministic SVG) ============ */
+(function(){
+  const host = $('#skyline'); if(!host) return;
+  const W=1600, H=300;
+  const struct = [
+    {x:60,s:.7,m:1},{x:230,s:1,m:2},{x:470,s:.85,m:1},{x:640,s:1.25,m:2},
+    {x:910,s:.9,m:1},{x:1080,s:1.1,m:2},{x:1330,s:.8,m:1},{x:1480,s:.65,m:1}
+  ];
+  let p = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">`;
+  p += `<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0c0b09" stop-opacity="0"/><stop offset="1" stop-color="#0c0b09"/></linearGradient></defs>`;
+  let body='';
+  struct.forEach(o=>{
+    const base = H, domeR = 46*o.s, bw = 120*o.s, bx = o.x, baseY = base, topY = base-90*o.s;
+    // building base
+    body += `<rect x="${bx-bw/2}" y="${topY}" width="${bw}" height="${baseY-topY}" fill="#171310"/>`;
+    // dome
+    body += `<path d="M ${bx-domeR} ${topY} A ${domeR} ${domeR} 0 0 1 ${bx+domeR} ${topY} Z" fill="#171310"/>`;
+    // dome finial
+    body += `<rect x="${bx-1.5}" y="${topY-domeR-14*o.s}" width="3" height="${14*o.s}" fill="#171310"/>`;
+    // minarets
+    for(let k=0;k<o.m;k++){
+      const mx = bx + (k===0? -bw/2-8 : bw/2+8) * (o.m===1?1:1) - (o.m===2 && k===1 ? -0 : 0);
+      const mX = o.m===2 ? (k===0 ? bx-bw/2-10 : bx+bw/2+10) : bx+bw/2+10;
+      const mH = 150*o.s, mw=7*o.s, my=base-mH;
+      body += `<rect x="${mX-mw/2}" y="${my}" width="${mw}" height="${mH}" fill="#171310"/>`;
+      body += `<polygon points="${mX-mw/2-2},${my} ${mX+mw/2+2},${my} ${mX},${my-22*o.s}" fill="#171310"/>`;
+      body += `<circle cx="${mX}" cy="${my-26*o.s}" r="${2.4*o.s}" fill="#171310"/>`;
+    }
+  });
+  p += body;
+  p += `<rect x="0" y="0" width="${W}" height="${H}" fill="url(#sg)"/>`;
+  p += `</svg>`;
+  host.innerHTML = p;
+})();
+
+/* ============ GSAP + Lenis ============ */
+window.addEventListener('load', ()=>{
+
+  /* loader out */
+  if(typeof gsap!=='undefined'){
+    const tl = gsap.timeline();
+    tl.to('#loader .lo-line', { width:160, duration:.7, ease:'power2.inOut' }, .1)
+      .to('#loader', { yPercent:-100, duration:.9, ease:'power3.inOut' }, .8)
+      .set('#loader', { display:'none' });
+  } else {
+    const l=$('#loader'); if(l) l.style.display='none';
+  }
+
+  if(typeof gsap==='undefined') return;
+  if(typeof ScrollTrigger!=='undefined') gsap.registerPlugin(ScrollTrigger);
+
+  /* Lenis smooth scroll */
+  let lenis=null;
+  if(typeof Lenis!=='undefined' && !prefersReduced){
+    lenis = new Lenis({ lerp:.1, smoothWheel:true, wheelMultiplier:1 });
+    lenis.on('scroll', ()=> ScrollTrigger && ScrollTrigger.update());
+    gsap.ticker.add(t=> lenis.raf(t*1000));
+    gsap.ticker.lagSmoothing(0);
+    // anchor links via lenis
+    $$('a[href^="#"]').forEach(a=>{
+      a.addEventListener('click', e=>{
+        const id=a.getAttribute('href'); if(id.length<2) return;
+        const t=$(id); if(!t) return; e.preventDefault();
+        lenis.scrollTo(t, { offset:-10, duration:1.2 });
+      });
+    });
+  }
+
+  /* hide all reveal lines up-front via gsap (no CSS transform → yPercent owns it cleanly).
+     The loader overlay covers this instant, so there is no flash. */
+  if(!prefersReduced) gsap.set('.reveal-line > *', { yPercent:110 });
+
+  /* hero intro — scoped to hero only */
+  const heroTl = gsap.timeline({ delay: .9 });
+  heroTl.to('#top .reveal-line > *', { yPercent:0, duration:1.1, stagger:.12, ease:'power4.out' })
+        .to('.hero-fade', { opacity:1, y:0, duration:1, stagger:.12, ease:'power2.out' }, '-=.7');
+
+  if(typeof ScrollTrigger==='undefined') return;
+
+  /* story headline lines reveal on scroll */
+  $$('#hikaye .reveal-line > *').forEach(el=>{
+    gsap.to(el, {
+      yPercent:0, duration:1, ease:'power4.out',
+      scrollTrigger:{ trigger:el, start:'top 88%' }
+    });
+  });
+
+  /* story image clip reveal */
+  $$('.clip-img').forEach(el=>{
+    gsap.to(el, {
+      clipPath:'inset(0 0 0% 0)', duration:1.3, ease:'power3.inOut',
+      scrollTrigger:{ trigger:el, start:'top 82%' }
+    });
+  });
+
+  /* dish track entrance — one trigger on the section so pinned/off-screen cards never get stuck hidden */
+  gsap.from('#dishTrack .dish', {
+    y:50, opacity:0, duration:.8, stagger:.08, ease:'power3.out',
+    scrollTrigger:{ trigger:'#lezzet', start:'top 70%' }
+  });
+
+  /* parallax images */
+  $$('.parax img').forEach(img=>{
+    const sp = parseFloat(img.dataset.speed||'30');
+    gsap.fromTo(img, { y: -Math.abs(sp) }, {
+      y: Math.abs(sp), ease:'none',
+      scrollTrigger:{ trigger:img.parentElement, start:'top bottom', end:'bottom top', scrub:true }
+    });
+  });
+
+  /* quote word reveal */
+  gsap.from('.quote-rev', {
+    opacity:.12, y:24, duration:1, stagger:.15, ease:'power2.out',
+    scrollTrigger:{ trigger:'.quote-rev', start:'top 85%' }
+  });
+
+  /* scroll progress */
+  gsap.to('#progress', {
+    width:'100%', ease:'none',
+    scrollTrigger:{ start:0, end:'max', scrub:.3 }
+  });
+
+  /* nav scrolled state */
+  ScrollTrigger.create({
+    start:'top -80',
+    onUpdate:self=>{ $('#nav').classList.toggle('scrolled', self.scroll()>80); },
+    onToggle:self=>{ $('#nav').classList.toggle('scrolled', self.isActive); }
+  });
+
+  /* horizontal cinematic dishes — desktop only */
+  const mm = gsap.matchMedia();
+  mm.add('(min-width: 768px)', ()=>{
+    const track = $('#dishTrack');
+    const section = $('#lezzet');
+    if(!track||!section) return;
+    const amount = ()=> track.scrollWidth - window.innerWidth + 80;
+    const tween = gsap.to(track, {
+      x: ()=> -amount(),
+      ease:'none',
+      scrollTrigger:{
+        trigger:section, start:'top top',
+        end:()=> '+=' + (amount()+window.innerHeight*.5),
+        scrub:1, pin:true, anticipatePin:1, invalidateOnRefresh:true
+      }
+    });
+    return ()=> tween.kill();
+  });
+
+  setTimeout(()=> ScrollTrigger.refresh(), 400);
+});
+
+/* ============ reservation form ============ */
+$('#resForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const t=$('#toast');
+  t.textContent = lang==='tr' ? 'Talebiniz alındı — sizi arayacağız ✓' : 'Request received — we will call you ✓';
+  t.style.opacity='1'; t.style.transform='translate(-50%,0)';
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translate(-50%,16px)'; }, 3800);
+  e.target.reset();
+});
+</script>
+</body>
+</html>
